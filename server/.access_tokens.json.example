@@ -1,0 +1,12 @@
+{
+  "items": {
+    "sample_item_id_123": {
+      "itemId": "sample_item_id_123",
+      "accessToken": "access-sandbox-example-token",
+      "institutionName": "Chase",
+      "institutionId": "ins_56",
+      "createdAt": "2026-08-27T12:00:00.000Z",
+      "cursor": null
+    }
+  }
+}

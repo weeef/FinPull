@@ -1,0 +1,24 @@
+{
+  "name": "finpull-server",
+  "version": "1.0.0",
+  "description": "Local backend server for FinPull Chrome Extension - connects securely to Plaid API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "plaid",
+    "finance",
+    "chrome-extension",
+    "finpull"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "plaid": "^29.0.0"
+  }
+}

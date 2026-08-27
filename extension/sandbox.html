@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FinPull Plaid Link Sandbox</title>
+  <!-- 
+    Plaid Link SDK is loaded inside this sandboxed page.
+    Chrome MV3 allows external script sources only inside sandboxed pages,
+    keeping the main extension popup completely secure and MV3-compliant.
+  -->
+  <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+  <script src="sandbox.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: transparent;
+    }
+  </style>
+</head>
+<body>
+</body>
+</html>

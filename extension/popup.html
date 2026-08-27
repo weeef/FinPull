@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinPull</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+            <polyline points="17 6 23 6 23 12"></polyline>
+          </svg>
+        </div>
+        <div class="header-title-group">
+          <h1 class="app-title">FinPull</h1>
+          <div id="connection-status" class="status-badge status-checking">
+            <span class="status-dot"></span>
+            <span class="status-text">Checking server...</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-refresh" class="icon-btn" title="Refresh data">
+          <svg id="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Alert / Toast Banner -->
+    <div id="alert-banner" class="alert-banner hidden">
+      <div id="alert-content" class="alert-content"></div>
+      <button id="alert-close" class="alert-close">&times;</button>
+    </div>
+
+    <!-- Balance Hero Card -->
+    <section class="hero-balance-card">
+      <div class="hero-header">
+        <span class="hero-label">Total Net Balance</span>
+        <span id="institution-count" class="institution-pill">0 Banks Linked</span>
+      </div>
+      <div id="total-balance" class="hero-amount">$0.00</div>
+      <div class="hero-footer">
+        <span id="last-updated" class="last-updated-text">Not updated yet</span>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="accounts">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+          <line x1="2" y1="10" x2="22" y2="10"></line>
+        </svg>
+        Accounts
+      </button>
+      <button class="nav-tab" data-tab="transactions">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="1" x2="12" y2="23"></line>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+        Transactions
+      </button>
+      <button class="nav-tab" data-tab="investments">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 3v18h18"></path>
+          <path d="m19 9-5 5-4-4-3 3"></path>
+        </svg>
+        Investments
+      </button>
+      <button class="nav-tab" data-tab="settings">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        Manage
+      </button>
+    </nav>
+
+    <!-- Tab Content Sections -->
+    <main class="content-area">
+      <!-- Loading Overlay -->
+      <div id="loading-spinner" class="loading-state hidden">
+        <div class="spinner"></div>
+        <p id="loading-text">Loading financial data...</p>
+      </div>
+
+      <!-- Tab 1: Accounts -->
+      <section id="tab-accounts" class="tab-pane active">
+        <div id="accounts-list" class="items-container">
+          <!-- Populated by JavaScript -->
+        </div>
+        <div id="accounts-empty" class="empty-state hidden">
+          <div class="empty-icon">🏦</div>
+          <h3>No accounts connected</h3>
+          <p>Link your first bank or credit card to see your balances in real time.</p>
+          <button class="primary-btn btn-connect-account">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Connect an Account
+          </button>
+        </div>
+      </section>
+
+      <!-- Tab 2: Transactions -->
+      <section id="tab-transactions" class="tab-pane">
+        <div class="section-header-row">
+          <span class="section-subtitle">Recent Activity (Sync)</span>
+          <span id="tx-count" class="badge">0 items</span>
+        </div>
+        <div id="transactions-list" class="items-container">
+          <!-- Populated by JavaScript -->
+        </div>
+        <div id="transactions-empty" class="empty-state hidden">
+          <div class="empty-icon">💳</div>
+          <h3>No transactions found</h3>
+          <p>Transactions will appear here once accounts are connected and synced.</p>
+        </div>
+      </section>
+
+      <!-- Tab 3: Investments -->
+      <section id="tab-investments" class="tab-pane">
+        <div class="investments-summary-card">
+          <span class="sub-label">Total Portfolio Value</span>
+          <div id="total-investments-value" class="investments-total">$0.00</div>
+        </div>
+        <div id="investments-list" class="items-container">
+          <!-- Populated by JavaScript -->
+        </div>
+        <div id="investments-empty" class="empty-state hidden">
+          <div class="empty-icon">📈</div>
+          <h3>No investment holdings</h3>
+          <p>Connect a brokerage or retirement account to track stocks, ETFs, and portfolio value.</p>
+        </div>
+      </section>
+
+      <!-- Tab 4: Settings & Institutions -->
+      <section id="tab-settings" class="tab-pane">
+        <div class="settings-card">
+          <div class="settings-header">
+            <h3>Connected Institutions</h3>
+            <button class="primary-btn btn-small btn-connect-account">
+              + Connect Bank
+            </button>
+          </div>
+          <div id="institutions-list" class="institutions-container">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+
+        <div class="settings-card info-box">
+          <h4>Security & Privacy</h4>
+          <p>FinPull communicates strictly with your local machine (<code>localhost:3000</code>). Your Plaid Secret is never exposed to the browser.</p>
+          <div class="link-helper-row">
+            <span>Alternative Link flow:</span>
+            <a href="http://localhost:3000/link" target="_blank" class="text-link">Open Plaid Link in Web Tab &rarr;</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Hidden Sandboxed Iframe for Plaid Link SDK -->
+    <iframe id="plaid-sandbox" src="sandbox.html" class="sandbox-frame" style="display:none;" title="Plaid Link Sandbox"></iframe>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

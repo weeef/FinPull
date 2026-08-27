@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "FinPull - Personal Financial Dashboard",
+  "version": "1.0.0",
+  "description": "Personal Chrome Extension connecting to your bank and investment accounts via Plaid and a secure local server.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "http://localhost:*/*",
+    "http://127.0.0.1:*/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "FinPull Dashboard",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "sandbox": {
+    "pages": [
+      "sandbox.html"
+    ]
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';",
+    "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals allow-same-origin; script-src 'self' 'unsafe-inline' https://cdn.plaid.com; object-src 'self';"
+  }
+}
