@@ -50,8 +50,7 @@ const el = {
   institutionsList: document.getElementById('institutions-list'),
   
   // Connect buttons
-  btnConnectList: document.querySelectorAll('.btn-connect-account'),
-  sandboxIframe: document.getElementById('plaid-sandbox')
+  btnConnectList: document.querySelectorAll('.btn-connect-account')
 };
 
 // ==========================================================================
@@ -60,7 +59,6 @@ const el = {
 
 document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
-  setupIframeMessageBridge();
   checkServerAndFetchData();
 });
 
