@@ -31,6 +31,6 @@
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self';",
-    "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals allow-same-origin; script-src 'self' 'unsafe-inline' https://cdn.plaid.com; object-src 'self';"
+    "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.plaid.com; child-src 'self' https://cdn.plaid.com; object-src 'self';"
   }
 }
