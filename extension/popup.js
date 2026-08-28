@@ -89,6 +89,13 @@ function setupEventListeners() {
   el.alertClose.addEventListener('click', () => {
     hideAlert();
   });
+
+  // Auto-refresh when user returns to popup window after connecting in tab
+  window.addEventListener('focus', () => {
+    if (appState.isServerOnline) {
+      refreshAllData();
+    }
+  });
 }
 
 function switchTab(tabId) {
@@ -101,98 +108,30 @@ function switchTab(tabId) {
   });
 }
 
-// ==========================================================================
-// Plaid Link Flow via Sandbox Iframe
-// ==========================================================================
-
-function showSandboxIframe() {
-  if (el.sandboxIframe) {
-    el.sandboxIframe.classList.remove('hidden');
-  }
-}
-
-function hideSandboxIframe() {
-  if (el.sandboxIframe) {
-    el.sandboxIframe.classList.add('hidden');
-  }
-}
+// ==========================================
+// Plaid Link Flow
+// ==========================================
 
 /**
- * Setup cross-window postMessage listener to receive events from sandbox.html
+ * Open the dedicated Plaid Link window on the local server.
+ * This runs with full browser capabilities (supporting OAuth redirects and storage)
+ * without being restricted by the extension sandbox or popup boundaries.
  */
-function setupIframeMessageBridge() {
-  window.addEventListener('message', async (event) => {
-    const data = event.data;
-    if (!data || !data.action) return;
-
-    switch (data.action) {
-      case 'PLAID_LINK_READY':
-        // Plaid Link initialized and opened inside sandbox
-        hideLoading();
-        showSandboxIframe();
-        break;
-
-      case 'PLAID_LINK_SUCCESS':
-        // User successfully authenticated with their bank in Plaid Link
-        console.log('[FinPull] Plaid Link success. Exchanging public token...');
-        hideSandboxIframe();
-        hideLoading();
-        showAlert('Authenticating with bank and saving access token...', 'warning');
-        await exchangePublicToken(data.public_token, data.metadata);
-        break;
-
-      case 'PLAID_LINK_EXIT':
-        hideSandboxIframe();
-        hideLoading();
-        if (data.error) {
-          showAlert(`Link exited: ${data.error}`, 'error');
-        }
-        break;
-
-      case 'PLAID_LINK_ERROR':
-        hideSandboxIframe();
-        hideLoading();
-        showAlert(`Plaid Link error: ${data.error}`, 'error');
-        break;
-    }
-  });
-}
-
-/**
- * Request a link_token from the local server, then message the sandboxed iframe to open Link
- */
-async function startPlaidLinkFlow() {
+function startPlaidLinkFlow() {
   if (!appState.isServerOnline) {
     showAlert('Cannot connect: Local server is offline. Run "npm start" in the /server folder.', 'error');
     return;
   }
 
-  showLoading('Generating secure Plaid Link token...');
+  const linkUrl = `${SERVER_URL}/link`;
 
-  try {
-    const response = await fetch(`${SERVER_URL}/create_link_token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.link_token) {
-      throw new Error(data.error || 'Failed to obtain link_token from local server');
-    }
-
-    // Pass the link_token to the sandboxed iframe
-    showLoading('Opening Plaid Link modal...');
-    el.sandboxIframe.contentWindow.postMessage({
-      action: 'OPEN_PLAID_LINK',
-      linkToken: data.link_token
-    }, '*');
-
-  } catch (error) {
-    hideLoading();
-    console.error('Error starting Plaid Link:', error);
-    showAlert(`Failed to start Plaid Link: ${error.message}`, 'error');
+  if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.create) {
+    chrome.tabs.create({ url: linkUrl });
+  } else {
+    window.open(linkUrl, '_blank');
   }
+
+  showAlert('Opened Plaid Link in a new tab. Connect your account there, then return here!', 'warning');
 }
 
 /**

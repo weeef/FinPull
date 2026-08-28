@@ -580,7 +580,7 @@ app.post('/disconnect_account', async (req, res) => {
 // ==========================================
 /**
  * Serves a dedicated web page for Plaid Link at http://localhost:3000/link
- * Can be opened in a browser tab as an alternative to the popup iframe if desired.
+ * Opens automatically when clicking "Connect an Account" in the Chrome extension.
  */
 app.get('/link', (req, res) => {
   res.send(`
@@ -589,80 +589,159 @@ app.get('/link', (req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FinPull - Connect Account (Plaid Link)</title>
+  <title>FinPull - Connect Bank Account</title>
   <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
   <style>
+    :root {
+      --bg: #0b0f19;
+      --card: #141d2e;
+      --border: #243147;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --blue: #3b82f6;
+      --green: #10b981;
+      --red: #ef4444;
+    }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0d1117;
-      color: #e6edf3;
+      background: var(--bg);
+      color: var(--text);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
       margin: 0;
-      padding: 20px;
-      text-align: center;
+      padding: 24px;
+      box-sizing: border-box;
     }
     .card {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
       padding: 32px;
-      max-width: 440px;
+      max-width: 460px;
       width: 100%;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      text-align: center;
     }
-    h1 { margin-top: 0; font-size: 24px; color: #58a6ff; }
-    p { color: #8b949e; line-height: 1.5; font-size: 14px; }
-    button {
-      background: #238636;
+    .logo-badge {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      color: white;
+      font-size: 22px;
+    }
+    h1 { margin: 0 0 8px 0; font-size: 22px; color: #fff; }
+    p { color: var(--text-muted); font-size: 14px; line-height: 1.5; margin: 0 0 20px 0; }
+    .btn {
+      background: var(--blue);
       color: white;
       border: none;
-      padding: 12px 24px;
-      font-size: 16px;
+      padding: 12px 28px;
+      font-size: 15px;
       font-weight: 600;
       border-radius: 8px;
       cursor: pointer;
-      margin-top: 20px;
-      transition: background 0.2s;
+      transition: background 0.2s, transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
-    button:hover { background: #2ea043; }
-    .status { margin-top: 16px; font-size: 14px; font-weight: 500; }
-    .success { color: #3fb950; }
-    .error { color: #f85149; }
+    .btn:hover { background: #2563eb; }
+    .btn:active { transform: scale(0.98); }
+    .status-box {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.4;
+      display: none;
+    }
+    .status-box.active { display: block; }
+    .status-box.info { background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #93c5fd; }
+    .status-box.success { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #6ee7b7; }
+    .status-box.error { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; }
+    .tips {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      text-align: left;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .tips strong { color: #e5e7eb; }
+    .tips code { background: #1f2937; padding: 2px 5px; border-radius: 4px; color: #93c5fd; }
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>FinPull Plaid Link</h1>
-    <p>Connect your bank or investment account securely to your local FinPull dashboard.</p>
-    <button id="link-btn">Connect Bank Account</button>
-    <div id="status" class="status"></div>
+    <div class="logo-badge">🏦</div>
+    <h1>Connect with Plaid Link</h1>
+    <p>Securely link your bank or investment account to your local FinPull dashboard.</p>
+    
+    <button id="link-btn" class="btn">
+      <span id="btn-spinner" class="spinner"></span>
+      <span id="btn-text">Opening Plaid Link...</span>
+    </button>
+
+    <div id="status" class="status-box"></div>
+
+    <div class="tips">
+      <strong>Sandbox Test Credentials:</strong><br>
+      • Username: <code>user_good</code> &nbsp;|&nbsp; Password: <code>pass_good</code><br>
+      • SMS / MFA Code: <code>1234</code>
+    </div>
   </div>
 
   <script>
     const btn = document.getElementById('link-btn');
+    const btnText = document.getElementById('btn-text');
+    const btnSpinner = document.getElementById('btn-spinner');
     const statusDiv = document.getElementById('status');
 
-    btn.addEventListener('click', async () => {
-      statusDiv.textContent = 'Generating secure link token...';
-      statusDiv.className = 'status';
+    function setStatus(msg, type = 'info') {
+      statusDiv.textContent = msg;
+      statusDiv.className = 'status-box active ' + type;
+    }
+
+    async function launchPlaidLink() {
       btn.disabled = true;
+      btnSpinner.style.display = 'inline-block';
+      btnText.textContent = 'Preparing secure Link token...';
+      setStatus('Connecting to local backend...', 'info');
 
       try {
         const response = await fetch('/create_link_token', { method: 'POST' });
         const data = await response.json();
 
-        if (!data.link_token) {
-          throw new Error(data.error || 'No link token received');
+        if (!response.ok || !data.link_token) {
+          throw new Error(data.error || 'Failed to create Plaid link token. Check your server/.env keys.');
         }
+
+        setStatus('Opening Plaid Link modal...', 'info');
+        btnText.textContent = 'Plaid Link Active';
+        btnSpinner.style.display = 'none';
 
         const handler = Plaid.create({
           token: data.link_token,
           onSuccess: async (public_token, metadata) => {
-            statusDiv.textContent = 'Exchanging token with local server...';
+            setStatus('Exchanging token and storing locally...', 'info');
             try {
               const exchRes = await fetch('/exchange_public_token', {
                 method: 'POST',
@@ -671,34 +750,47 @@ app.get('/link', (req, res) => {
               });
               const exchData = await exchRes.json();
               if (exchData.success) {
-                statusDiv.className = 'status success';
-                statusDiv.textContent = 'Connected ' + (metadata.institution ? metadata.institution.name : 'account') + ' successfully! You can close this tab and refresh the extension.';
-                btn.textContent = 'Connected!';
+                const instName = metadata.institution ? metadata.institution.name : 'Bank';
+                setStatus('🎉 Successfully connected to ' + instName + '! You can now close this tab and open the FinPull extension popup.', 'success');
+                btnText.textContent = 'Connected Successfully!';
+                btn.style.background = '#10b981';
+                btn.disabled = false;
+                btn.onclick = () => window.close();
+                btnText.textContent = 'Close Tab';
               } else {
                 throw new Error(exchData.error || 'Failed to exchange token');
               }
             } catch (err) {
-              statusDiv.className = 'status error';
-              statusDiv.textContent = 'Error: ' + err.message;
+              setStatus('Exchange error: ' + err.message, 'error');
+              btn.disabled = false;
             }
           },
           onExit: (err, metadata) => {
             btn.disabled = false;
+            btnSpinner.style.display = 'none';
+            btnText.textContent = 'Open Plaid Link Again';
             if (err) {
-              statusDiv.className = 'status error';
-              statusDiv.textContent = 'Link exit: ' + err.message;
+              setStatus('Link exit: ' + (err.display_message || err.error_message || err.message), 'error');
             } else {
-              statusDiv.textContent = 'Link flow closed.';
+              setStatus('Link window closed. Click the button above to retry.', 'info');
             }
           }
         });
 
         handler.open();
       } catch (err) {
-        statusDiv.className = 'status error';
-        statusDiv.textContent = 'Error: ' + err.message;
+        setStatus('Error: ' + err.message, 'error');
         btn.disabled = false;
+        btnSpinner.style.display = 'none';
+        btnText.textContent = 'Retry Plaid Link';
       }
+    }
+
+    btn.addEventListener('click', launchPlaidLink);
+
+    // Auto-launch immediately on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(launchPlaidLink, 300);
     });
   </script>
 </body>
