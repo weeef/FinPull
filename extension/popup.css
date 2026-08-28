@@ -781,8 +781,24 @@ body {
 }
 
 /* ==========================================================================
-   Loading Overlay
+   Loading Overlay & Sandbox Iframe
    ========================================================================== */
+
+.sandbox-frame {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  border: none;
+  z-index: 99999;
+  background: rgba(11, 15, 25, 0.95);
+  display: block;
+}
+
+.sandbox-frame.hidden {
+  display: none !important;
+}
 
 .loading-state {
   position: absolute;

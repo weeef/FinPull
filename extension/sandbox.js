@@ -16,7 +16,7 @@ window.addEventListener('message', function (event) {
     if (!window.Plaid) {
       window.parent.postMessage({
         action: 'PLAID_LINK_ERROR',
-        error: 'Plaid Link SDK failed to load in sandbox.'
+        error: 'Plaid Link SDK failed to load inside sandboxed iframe.'
       }, '*');
       return;
     }
@@ -47,6 +47,11 @@ window.addEventListener('message', function (event) {
           }, '*');
         }
       });
+
+      // Notify parent to unhide the iframe and dismiss the loading spinner
+      window.parent.postMessage({
+        action: 'PLAID_LINK_READY'
+      }, '*');
 
       handler.open();
     } catch (err) {

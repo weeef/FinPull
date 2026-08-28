@@ -105,6 +105,18 @@ function switchTab(tabId) {
 // Plaid Link Flow via Sandbox Iframe
 // ==========================================================================
 
+function showSandboxIframe() {
+  if (el.sandboxIframe) {
+    el.sandboxIframe.classList.remove('hidden');
+  }
+}
+
+function hideSandboxIframe() {
+  if (el.sandboxIframe) {
+    el.sandboxIframe.classList.add('hidden');
+  }
+}
+
 /**
  * Setup cross-window postMessage listener to receive events from sandbox.html
  */
@@ -114,15 +126,23 @@ function setupIframeMessageBridge() {
     if (!data || !data.action) return;
 
     switch (data.action) {
+      case 'PLAID_LINK_READY':
+        // Plaid Link initialized and opened inside sandbox
+        hideLoading();
+        showSandboxIframe();
+        break;
+
       case 'PLAID_LINK_SUCCESS':
         // User successfully authenticated with their bank in Plaid Link
         console.log('[FinPull] Plaid Link success. Exchanging public token...');
+        hideSandboxIframe();
         hideLoading();
         showAlert('Authenticating with bank and saving access token...', 'warning');
         await exchangePublicToken(data.public_token, data.metadata);
         break;
 
       case 'PLAID_LINK_EXIT':
+        hideSandboxIframe();
         hideLoading();
         if (data.error) {
           showAlert(`Link exited: ${data.error}`, 'error');
@@ -130,6 +150,7 @@ function setupIframeMessageBridge() {
         break;
 
       case 'PLAID_LINK_ERROR':
+        hideSandboxIframe();
         hideLoading();
         showAlert(`Plaid Link error: ${data.error}`, 'error');
         break;
