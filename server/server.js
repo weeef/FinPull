@@ -156,15 +156,24 @@ app.post('/create_link_token', async (req, res) => {
       });
     }
 
-    // Configure products to request from Plaid
-    // Auth: account/routing numbers
-    // Transactions: recent purchases & deposits
-    // Investments: stocks, ETFs, mutual funds holdings
-    const products = [Products.Auth, Products.Transactions, Products.Investments];
+    // Configure products from .env (e.g. PLAID_PRODUCTS=transactions,auth)
+    const productStr = process.env.PLAID_PRODUCTS || 'transactions,auth';
+    const envProducts = productStr.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
+
+    const validProductMap = {
+      transactions: Products.Transactions,
+      auth: Products.Auth,
+      investments: Products.Investments,
+      identity: Products.Identity
+    };
+
+    let products = envProducts.map(p => validProductMap[p]).filter(Boolean);
+    if (products.length === 0) {
+      products = [Products.Transactions];
+    }
 
     const linkTokenConfig = {
       user: {
-        // Unique identifier for your local user session
         client_user_id: 'finpull-personal-user',
       },
       client_name: 'FinPull Personal Dashboard',
@@ -173,7 +182,20 @@ app.post('/create_link_token', async (req, res) => {
       language: 'en',
     };
 
-    const response = await plaidClient.linkTokenCreate(linkTokenConfig);
+    let response;
+    try {
+      response = await plaidClient.linkTokenCreate(linkTokenConfig);
+    } catch (createErr) {
+      // If investments or auth is not enabled on this Plaid team tier, fallback to transactions
+      const errCode = createErr.response?.data?.error_code;
+      if (errCode === 'INVALID_PRODUCT' || errCode === 'PRODUCTS_NOT_SUPPORTED') {
+        console.warn(`[FinPull] Product ${productStr} not fully enabled for team, falling back to [transactions]...`);
+        linkTokenConfig.products = [Products.Transactions];
+        response = await plaidClient.linkTokenCreate(linkTokenConfig);
+      } else {
+        throw createErr;
+      }
+    }
     
     // Return link_token to the extension
     res.json({
@@ -181,10 +203,11 @@ app.post('/create_link_token', async (req, res) => {
       expiration: response.data.expiration
     });
   } catch (error) {
-    console.error('Error creating Plaid link token:', error.response ? error.response.data : error.message);
+    const errorData = error.response ? error.response.data : error.message;
+    console.error('Error creating Plaid link token:', errorData);
     res.status(500).json({
       error: 'Failed to create Plaid link token',
-      details: error.response ? error.response.data : error.message
+      details: errorData
     });
   }
 });
