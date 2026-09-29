@@ -173,24 +173,75 @@ Once you have verified that the extension and backend work smoothly in Sandbox m
 
 ---
 
+---
+
+## 📊 Google Sheets Budget Sync
+
+FinPull allows you to push real-time account balances, credit balances, and investment totals straight into your personal Google Sheet budget with **1 click**.
+
+### 🎯 Key Capabilities
+1. **Flexible Budget Cell Mapping**:
+   - Map any connected bank account (or Net Balance) directly to specific cells in your existing budget layout (e.g. `Chase Checking ➔ Budget!B5`, `Amex Card ➔ Budget!C12`, `Total Net Balance ➔ Summary!D2`).
+   - Choose whether to push **Current Balance** or **Available Balance**.
+2. **Account Snapshot Table**:
+   - Automatically maintains a clean, formatted balance table in a dedicated tab (`FinPull_Balances`).
+   - Supports **Overwrite Mode** (keeps a single live dashboard table) or **Append Mode** (creates a timestamped historical net worth log over time).
+3. **1-Click Quick Push**:
+   - Click the green `⚡ Push Numbers to Google Sheet` button in the **Sheets** tab or the quick push icon in the header at any time.
+   - Option to automatically push to Google Sheets whenever balances refresh.
+
+---
+
+### ⚙️ Connection Setup
+
+FinPull supports two connection methods:
+
+#### Method A: Google Apps Script Webhook (Recommended — 1-Minute Setup)
+*No Google Cloud project or API credentials required!*
+
+1. Open your Google Sheet budget.
+2. In the top menu, go to **Extensions** → **Apps Script**.
+3. Copy the script from [`server/google_apps_script.js`](file:///d:/FinPull/server/google_apps_script.js) (or click **"📋 Copy Apps Script Code"** in the FinPull extension popup).
+4. Paste it into the editor, replacing any default code, and click Save (💾).
+5. Click **Deploy** (top right) → **New deployment**.
+6. Click the gear icon next to "Select type" and choose **Web app**:
+   - **Description**: `FinPull Sync`
+   - **Execute as**: `Me`
+   - **Who has access**: `Anyone`
+7. Click **Deploy**, authorize permissions, and copy the **Web app URL** (`https://script.google.com/macros/s/.../exec`).
+8. Paste this URL into FinPull's **Sheets** tab and click **Test Connection**!
+
+#### Method B: Google Cloud Service Account API
+*For users who prefer official Google Sheets v4 API service accounts:*
+
+1. In the Google Cloud Console, enable the **Google Sheets API**.
+2. Create a Service Account and download its JSON key file.
+3. Open your Google Sheet and share it with the service account's email as **Editor**.
+4. In FinPull's **Sheets** tab, select **Service Account API**, enter your Spreadsheet ID or URL, and paste the JSON key (saved locally to `server/service_account.json`).
+5. Click **Test Connection**.
+
+---
+
 ## 🛠️ Project Structure
 
 ```
 FinPull/
-├── .gitignore                      # Excludes .env, .access_tokens.json, node_modules/
+├── .gitignore                      # Excludes .env, .access_tokens.json, .sheets_config.json, service_account.json
 ├── README.md                       # Documentation & instructions
 │
 ├── server/                         # Node.js + Express backend
-│   ├── package.json                # Dependencies: express, plaid, dotenv, cors
+│   ├── package.json                # Dependencies: express, plaid, googleapis, dotenv, cors
 │   ├── server.js                   # API routes and token management
+│   ├── sheets.js                   # Google Sheets sync engine (Webhook + Service Account)
+│   ├── google_apps_script.js       # Ready-to-deploy Google Apps Script template
 │   ├── .env.example                # Environment variable template
 │   └── .access_tokens.json.example # Schema example of local token storage
 │
 └── extension/                      # Chrome Extension (Manifest V3)
     ├── manifest.json               # MV3 manifest with sandbox & permissions
-    ├── popup.html                  # Extension popup interface
-    ├── popup.css                   # Dark FinTech design system
-    ├── popup.js                    # UI logic & fetch calls to localhost:3000
+    ├── popup.html                  # Extension popup interface with Google Sheets tab
+    ├── popup.css                   # Dark FinTech design system & sheets styling
+    ├── popup.js                    # UI logic, data sync & Google Sheets dispatcher
     ├── sandbox.html                # MV3 Sandboxed page for Plaid Link SDK
     ├── sandbox.js                  # Bridge between Plaid Link and popup.js
     └── icons/                      # Extension icons (16px, 48px, 128px)
@@ -210,6 +261,12 @@ FinPull/
 | `GET` | `/investments` | Fetches securities & holdings via `/investments/holdings/get` |
 | `POST` | `/disconnect_account` | Revokes token on Plaid and deletes from local store |
 | `GET` | `/link` | Dedicated standalone browser page for Plaid Link |
+| `GET` | `/sheets/config` | Retrieves Google Sheets sync configuration & cell mappings |
+| `POST` | `/sheets/config` | Saves Google Sheets sync configuration & cell mappings |
+| `GET` | `/sheets/template_script`| Retrieves Google Apps Script webhook template code |
+| `POST` | `/sheets/service_account_key` | Saves uploaded service_account.json key |
+| `POST` | `/sheets/test` | Tests connection to Google Sheets (Webhook or Service Account) |
+| `POST` | `/sheets/push` | Gathers latest balances and pushes numbers to Google Sheets |
 
 ---
 

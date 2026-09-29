@@ -12,6 +12,10 @@ yarn-error.log*
 # Local Token Storage (Contains Plaid access_tokens for local single-user use)
 .access_tokens.json
 server/.access_tokens.json
+.sheets_config.json
+server/.sheets_config.json
+service_account.json
+server/service_account.json
 
 # Operating System & IDE Files
 .DS_Store
@@ -19,3 +23,9 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# Local Startup Scripts
+*.bat
+*.vbs
+server/*.bat
+server/*.vbs

@@ -26,6 +26,14 @@
         </div>
       </div>
       <div class="header-actions">
+        <button id="btn-quick-push" class="icon-btn highlight-btn" title="Push balances to Google Sheet">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="12" y1="18" x2="12" y2="12"></line>
+            <polyline points="9 15 12 12 15 15"></polyline>
+          </svg>
+        </button>
         <button id="btn-refresh" class="icon-btn" title="Refresh data">
           <svg id="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
@@ -49,34 +57,45 @@
       <div id="total-balance" class="hero-amount">$0.00</div>
       <div class="hero-footer">
         <span id="last-updated" class="last-updated-text">Not updated yet</span>
+        <span id="sheet-sync-pill" class="sheet-sync-pill hidden">Sheet Synced</span>
       </div>
     </section>
 
     <!-- Navigation Tabs -->
     <nav class="nav-tabs">
       <button class="nav-tab active" data-tab="accounts">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="2" y="5" width="20" height="14" rx="2"></rect>
           <line x1="2" y1="10" x2="22" y2="10"></line>
         </svg>
         Accounts
       </button>
       <button class="nav-tab" data-tab="transactions">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="1" x2="12" y2="23"></line>
           <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
         </svg>
-        Transactions
+        Txns
       </button>
       <button class="nav-tab" data-tab="investments">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 3v18h18"></path>
           <path d="m19 9-5 5-4-4-3 3"></path>
         </svg>
-        Investments
+        Invest
+      </button>
+      <button class="nav-tab" data-tab="sheets">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="8" y1="13" x2="16" y2="13"></line>
+          <line x1="8" y1="17" x2="16" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        Sheets
       </button>
       <button class="nav-tab" data-tab="settings">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"></circle>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
         </svg>
@@ -140,7 +159,209 @@
         </div>
       </section>
 
-      <!-- Tab 4: Settings & Institutions -->
+      <!-- Tab 4: Google Sheets Sync -->
+      <section id="tab-sheets" class="tab-pane">
+        <!-- Sheets Sync Hero Card -->
+        <div class="sheets-hero-card">
+          <div class="sheets-hero-header">
+            <div>
+              <div class="sheets-title-row">
+                <span class="sheets-icon">📊</span>
+                <span class="sheets-hero-title">Google Sheets Budget Sync</span>
+              </div>
+              <div id="sheets-connection-badge" class="sheets-badge badge-unconfigured">Setup Required</div>
+            </div>
+            <button id="btn-open-sheet" class="icon-text-btn" title="Open Google Sheet in browser" disabled>
+              <span>Open Sheet</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+            </button>
+          </div>
+
+          <div id="sheets-sync-status-msg" class="sheets-status-msg">
+            Connect your budget sheet using Apps Script Webhook or Google Service Account.
+          </div>
+
+          <div class="sheets-hero-actions">
+            <button id="btn-push-sheets" class="primary-btn btn-push-cta">
+              <span id="push-btn-spinner" class="spinner hidden"></span>
+              <svg id="push-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="12" y1="18" x2="12" y2="12"></line>
+                <polyline points="9 15 12 12 15 15"></polyline>
+              </svg>
+              <span id="push-btn-text">Push Numbers to Google Sheet</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Connection Method Card -->
+        <div class="settings-card">
+          <div class="settings-header">
+            <h4>Connection Method</h4>
+          </div>
+
+          <div class="method-toggle-group">
+            <button type="button" class="method-toggle-btn active" data-method="webhook">
+              Apps Script Webhook
+              <span class="pill-rec">Recommended</span>
+            </button>
+            <button type="button" class="method-toggle-btn" data-method="service_account">
+              Service Account API
+            </button>
+          </div>
+
+          <!-- Webhook Fields -->
+          <div id="method-panel-webhook" class="method-panel active">
+            <div class="form-group">
+              <label for="sheets-webhook-url">Google Apps Script Web App URL</label>
+              <input type="url" id="sheets-webhook-url" class="text-input" placeholder="https://script.google.com/macros/s/.../exec">
+            </div>
+
+            <div class="script-helper-box">
+              <div class="script-helper-header">
+                <span class="helper-badge">1-Minute Setup</span>
+                <button id="btn-copy-script" class="btn-subtle" title="Copy script to clipboard">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <span id="copy-script-text">Copy Apps Script Code</span>
+                </button>
+              </div>
+              <p class="helper-desc">In your Google Sheet, open <strong>Extensions &gt; Apps Script</strong>, paste this script, click <strong>Deploy &gt; New deployment &gt; Web app</strong> (Access: Anyone), and paste the Web app URL above!</p>
+            </div>
+          </div>
+
+          <!-- Service Account Fields -->
+          <div id="method-panel-service-account" class="method-panel hidden">
+            <div class="form-group">
+              <label for="sheets-spreadsheet-id">Google Sheet ID or Full URL</label>
+              <input type="text" id="sheets-spreadsheet-id" class="text-input" placeholder="https://docs.google.com/spreadsheets/d/.../edit or ID">
+            </div>
+
+            <div id="sa-status-info" class="sa-status-box">
+              <div id="sa-status-text">No service_account.json key configured yet.</div>
+            </div>
+
+            <div class="form-group">
+              <label for="sheets-sa-key-input">Paste service_account.json Key or Upload</label>
+              <textarea id="sheets-sa-key-input" class="text-area" rows="3" placeholder='{"type": "service_account", "project_id": ...}'></textarea>
+              <div class="sa-key-actions">
+                <button id="btn-save-sa-key" class="btn-subtle">Save Service Account Key</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Connection Action Buttons -->
+          <div class="form-actions-row">
+            <button id="btn-test-sheets-conn" class="secondary-btn">Test Connection</button>
+            <button id="btn-save-sheets-config" class="primary-btn btn-small">Save Settings</button>
+          </div>
+        </div>
+
+        <!-- Budget Cell Mappings Card -->
+        <div class="settings-card">
+          <div class="settings-header">
+            <div>
+              <h4>Budget Cell Mappings</h4>
+              <p class="section-hint">Push specific bank balances directly to designated budget cells (e.g. Checking balance ➔ B5).</p>
+            </div>
+            <span id="mapping-badge-count" class="badge">0 mapped</span>
+          </div>
+
+          <!-- Mappings List -->
+          <div id="cell-mappings-list" class="mappings-container">
+            <!-- Populated by JavaScript -->
+          </div>
+
+          <div id="cell-mappings-empty" class="empty-state-mini">
+            <span>No cell mappings configured. Add your first mapping below!</span>
+          </div>
+
+          <!-- Add Mapping Form -->
+          <div class="add-mapping-form">
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="map-account-select">Bank Account / Balance</label>
+                <select id="map-account-select" class="select-input">
+                  <option value="">-- Select Source Account --</option>
+                  <option value="TOTAL_NET_BALANCE">💰 Total Net Balance</option>
+                  <option value="TOTAL_INVESTMENTS_VALUE">📈 Total Investments Portfolio</option>
+                  <!-- Populated dynamically with connected accounts -->
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="map-balance-type">Balance Type</label>
+                <select id="map-balance-type" class="select-input">
+                  <option value="current">Current Balance</option>
+                  <option value="available">Available Balance</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row-3">
+              <div class="form-group flex-2">
+                <label for="map-target-sheet">Sheet Tab Name</label>
+                <input type="text" id="map-target-sheet" class="text-input" placeholder="e.g. Budget (optional)">
+              </div>
+              <div class="form-group flex-1">
+                <label for="map-target-cell">Target Cell</label>
+                <input type="text" id="map-target-cell" class="text-input" placeholder="e.g. B5" maxlength="8">
+              </div>
+              <div class="form-group form-action-col">
+                <label>&nbsp;</label>
+                <button id="btn-add-mapping" class="primary-btn btn-small">+ Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Snapshot Table Settings Card -->
+        <div class="settings-card">
+          <div class="settings-header">
+            <h4>Account Snapshot Table</h4>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="snapshot-enabled" checked>
+            <label for="snapshot-enabled">Write full account snapshot table to dedicated tab</label>
+          </div>
+
+          <div id="snapshot-options-panel">
+            <div class="form-row-2" style="margin-top: 10px;">
+              <div class="form-group">
+                <label for="snapshot-sheet-name">Tab Name</label>
+                <input type="text" id="snapshot-sheet-name" class="text-input" value="FinPull_Balances" placeholder="FinPull_Balances">
+              </div>
+              <div class="form-group">
+                <label for="snapshot-mode">Snapshot Mode</label>
+                <select id="snapshot-mode" class="select-input">
+                  <option value="replace">Overwrite Current Table</option>
+                  <option value="append">Append Historical Log</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Automation & Preferences -->
+        <div class="settings-card">
+          <div class="settings-header">
+            <h4>Sync Automation</h4>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="sheets-auto-push">
+            <label for="sheets-auto-push">Automatically push to Google Sheet when balances refresh</label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab 5: Settings & Institutions -->
       <section id="tab-settings" class="tab-pane">
         <div class="settings-card">
           <div class="settings-header">

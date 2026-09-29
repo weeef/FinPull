@@ -1,0 +1,9 @@
+{
+  "name": "finpull",
+  "version": "1.0.0",
+  "description": "FinPull Chrome Extension & Server",
+  "scripts": {
+    "start": "npm start --prefix server",
+    "dev": "npm run dev --prefix server"
+  }
+}

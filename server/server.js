@@ -18,6 +18,7 @@ const dotenv = require('dotenv');
 const fs = require('fs');
 const path = require('path');
 const { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } = require('plaid');
+const sheets = require('./sheets');
 
 // Load environment variables from .env file
 dotenv.config();
@@ -27,7 +28,7 @@ const PORT = process.env.PORT || 3000;
 const TOKENS_FILE = path.join(__dirname, '.access_tokens.json');
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Configure CORS: restrict to your Chrome extension ID or localhost
 const extensionId = process.env.EXTENSION_ID;
@@ -270,100 +271,103 @@ app.post('/exchange_public_token', async (req, res) => {
 });
 
 /**
+ * Helper: Fetches real-time account balances from Plaid for all connected institutions.
+ */
+async function fetchAccountsData() {
+  const store = readStoredTokens();
+  const items = store.items || {};
+  const itemIds = Object.keys(items);
+
+  if (itemIds.length === 0) {
+    return {
+      totalBalance: 0,
+      accounts: [],
+      institutions: [],
+      message: 'No bank accounts connected yet.'
+    };
+  }
+
+  const allAccounts = [];
+  const institutionsList = [];
+  let totalBalance = 0;
+
+  for (const itemId of itemIds) {
+    const itemData = items[itemId];
+    try {
+      const response = await plaidClient.accountsBalanceGet({
+        access_token: itemData.accessToken,
+      });
+
+      const accounts = response.data.accounts || [];
+      
+      institutionsList.push({
+        itemId: itemId,
+        institutionName: itemData.institutionName,
+        institutionId: itemData.institutionId,
+        status: 'OK',
+        accountCount: accounts.length,
+        connectedAt: itemData.createdAt
+      });
+
+      for (const acc of accounts) {
+        const currentBalance = acc.balances?.current ?? 0;
+        const availableBalance = acc.balances?.available ?? currentBalance;
+        
+        if (acc.type === 'credit' || acc.type === 'loan') {
+          totalBalance -= currentBalance;
+        } else {
+          totalBalance += currentBalance;
+        }
+
+        allAccounts.push({
+          id: acc.account_id,
+          itemId: itemId,
+          institutionName: itemData.institutionName,
+          name: acc.name,
+          officialName: acc.official_name || acc.name,
+          mask: acc.mask ? `•••${acc.mask}` : '••••',
+          type: acc.type,
+          subtype: acc.subtype,
+          balances: {
+            current: currentBalance,
+            available: availableBalance,
+            isoCurrencyCode: acc.balances?.iso_currency_code || 'USD'
+          }
+        });
+      }
+    } catch (itemError) {
+      const errorData = itemError.response?.data;
+      const errorCode = errorData?.error_code;
+
+      console.error(`Error fetching balances for ${itemData.institutionName}:`, errorCode || itemError.message);
+
+      institutionsList.push({
+        itemId: itemId,
+        institutionName: itemData.institutionName,
+        institutionId: itemData.institutionId,
+        status: errorCode === 'ITEM_LOGIN_REQUIRED' ? 'ITEM_LOGIN_REQUIRED' : 'ERROR',
+        errorMessage: errorData?.error_message || itemError.message,
+        reconnectRequired: errorCode === 'ITEM_LOGIN_REQUIRED'
+      });
+    }
+  }
+
+  return {
+    totalBalance: Math.round(totalBalance * 100) / 100,
+    accounts: allAccounts,
+    institutions: institutionsList
+  };
+}
+
+/**
  * GET /accounts
  * 
  * Fetches real-time account balances from Plaid for all connected institutions.
- * Combines them into a single summary with total balance and per-account breakdowns.
  */
 app.get('/accounts', async (req, res) => {
   try {
-    const store = readStoredTokens();
-    const items = store.items || {};
-    const itemIds = Object.keys(items);
-
-    if (itemIds.length === 0) {
-      return res.json({
-        totalBalance: 0,
-        accounts: [],
-        institutions: [],
-        message: 'No bank accounts connected yet.'
-      });
-    }
-
-    const allAccounts = [];
-    const institutionsList = [];
-    let totalBalance = 0;
-
-    // Fetch accounts for each linked institution
-    for (const itemId of itemIds) {
-      const itemData = items[itemId];
-      try {
-        // Plaid /accounts/balance/get retrieves real-time balances
-        const response = await plaidClient.accountsBalanceGet({
-          access_token: itemData.accessToken,
-        });
-
-        const accounts = response.data.accounts || [];
-        
-        institutionsList.push({
-          itemId: itemId,
-          institutionName: itemData.institutionName,
-          institutionId: itemData.institutionId,
-          status: 'OK',
-          accountCount: accounts.length,
-          connectedAt: itemData.createdAt
-        });
-
-        for (const acc of accounts) {
-          const currentBalance = acc.balances?.current ?? 0;
-          const availableBalance = acc.balances?.available ?? currentBalance;
-          
-          // Add to total balance (credit/loan accounts subtract or represent liabilities)
-          if (acc.type === 'credit' || acc.type === 'loan') {
-            totalBalance -= currentBalance;
-          } else {
-            totalBalance += currentBalance;
-          }
-
-          allAccounts.push({
-            id: acc.account_id,
-            itemId: itemId,
-            institutionName: itemData.institutionName,
-            name: acc.name,
-            officialName: acc.official_name || acc.name,
-            mask: acc.mask ? `•••${acc.mask}` : '••••',
-            type: acc.type,         // depository, credit, loan, investment
-            subtype: acc.subtype,   // checking, savings, credit card, 401k, etc.
-            balances: {
-              current: currentBalance,
-              available: availableBalance,
-              isoCurrencyCode: acc.balances?.iso_currency_code || 'USD'
-            }
-          });
-        }
-      } catch (itemError) {
-        const errorData = itemError.response?.data;
-        const errorCode = errorData?.error_code;
-
-        console.error(`Error fetching balances for ${itemData.institutionName}:`, errorCode || itemError.message);
-
-        // Surface Plaid error cleanly (e.g. ITEM_LOGIN_REQUIRED if bank credentials changed)
-        institutionsList.push({
-          itemId: itemId,
-          institutionName: itemData.institutionName,
-          institutionId: itemData.institutionId,
-          status: errorCode === 'ITEM_LOGIN_REQUIRED' ? 'ITEM_LOGIN_REQUIRED' : 'ERROR',
-          errorMessage: errorData?.error_message || itemError.message,
-          reconnectRequired: errorCode === 'ITEM_LOGIN_REQUIRED'
-        });
-      }
-    }
-
-    res.json({
-      totalBalance: Math.round(totalBalance * 100) / 100,
-      accounts: allAccounts,
-      institutions: institutionsList
-    });
+    const data = await fetchAccountsData();
+    res.json(data);
   } catch (error) {
     console.error('Error fetching accounts:', error.message);
     res.status(500).json({ error: 'Failed to retrieve accounts', details: error.message });
@@ -457,90 +461,94 @@ app.get('/transactions', async (req, res) => {
 });
 
 /**
+ * Helper: Fetches investment holdings and portfolio value for all connected institutions.
+ */
+async function fetchInvestmentsData() {
+  const store = readStoredTokens();
+  const items = store.items || {};
+  const itemIds = Object.keys(items);
+
+  if (itemIds.length === 0) {
+    return { holdings: [], securities: [], totalInvestmentsValue: 0 };
+  }
+
+  const allHoldings = [];
+  const securitiesMap = {};
+  let totalInvestmentsValue = 0;
+
+  for (const itemId of itemIds) {
+    const itemData = items[itemId];
+    try {
+      const response = await plaidClient.investmentsHoldingsGet({
+        access_token: itemData.accessToken,
+      });
+
+      const holdings = response.data.holdings || [];
+      const securities = response.data.securities || [];
+
+      // Build quick lookup map for securities
+      for (const sec of securities) {
+        securitiesMap[sec.security_id] = {
+          securityId: sec.security_id,
+          name: sec.name,
+          tickerSymbol: sec.ticker_symbol || 'N/A',
+          type: sec.type,
+          closePrice: sec.close_price,
+          closePriceAsOf: sec.close_price_as_of,
+          isoCurrencyCode: sec.iso_currency_code || 'USD'
+        };
+      }
+
+      // Map holdings
+      for (const h of holdings) {
+        const security = securitiesMap[h.security_id] || {};
+        const value = h.institution_value ?? ((h.quantity || 0) * (security.closePrice || 0));
+        totalInvestmentsValue += value;
+
+        allHoldings.push({
+          holdingId: `${itemId}_${h.account_id}_${h.security_id}`,
+          itemId: itemId,
+          institutionName: itemData.institutionName,
+          accountId: h.account_id,
+          securityId: h.security_id,
+          name: security.name || 'Unknown Security',
+          tickerSymbol: security.tickerSymbol || 'N/A',
+          type: security.type || 'Other',
+          quantity: h.quantity,
+          costBasis: h.cost_basis,
+          price: security.closePrice || h.institution_price || 0,
+          value: Math.round(value * 100) / 100,
+          isoCurrencyCode: h.iso_currency_code || security.isoCurrencyCode || 'USD'
+        });
+      }
+    } catch (itemError) {
+      const errorCode = itemError.response?.data?.error_code;
+      if (errorCode === 'PRODUCTS_NOT_SUPPORTED' || errorCode === 'INVALID_PRODUCT') {
+        continue;
+      }
+      console.warn(`Investments not available for ${itemData.institutionName}: ${errorCode || itemError.message}`);
+    }
+  }
+
+  // Sort holdings by value descending
+  allHoldings.sort((a, b) => (b.value || 0) - (a.value || 0));
+
+  return {
+    totalInvestmentsValue: Math.round(totalInvestmentsValue * 100) / 100,
+    holdingsCount: allHoldings.length,
+    holdings: allHoldings
+  };
+}
+
+/**
  * GET /investments
  * 
  * Calls `/investments/holdings/get` for all connected institutions.
- * Gracefully ignores institutions that do not support investment products (e.g. checking-only banks).
  */
 app.get('/investments', async (req, res) => {
   try {
-    const store = readStoredTokens();
-    const items = store.items || {};
-    const itemIds = Object.keys(items);
-
-    if (itemIds.length === 0) {
-      return res.json({ holdings: [], securities: [], totalInvestmentsValue: 0 });
-    }
-
-    const allHoldings = [];
-    const securitiesMap = {};
-    let totalInvestmentsValue = 0;
-
-    for (const itemId of itemIds) {
-      const itemData = items[itemId];
-      try {
-        const response = await plaidClient.investmentsHoldingsGet({
-          access_token: itemData.accessToken,
-        });
-
-        const holdings = response.data.holdings || [];
-        const securities = response.data.securities || [];
-
-        // Build quick lookup map for securities
-        for (const sec of securities) {
-          securitiesMap[sec.security_id] = {
-            securityId: sec.security_id,
-            name: sec.name,
-            tickerSymbol: sec.ticker_symbol || 'N/A',
-            type: sec.type,
-            closePrice: sec.close_price,
-            closePriceAsOf: sec.close_price_as_of,
-            isoCurrencyCode: sec.iso_currency_code || 'USD'
-          };
-        }
-
-        // Map holdings
-        for (const h of holdings) {
-          const security = securitiesMap[h.security_id] || {};
-          const value = h.institution_value ?? ((h.quantity || 0) * (security.closePrice || 0));
-          totalInvestmentsValue += value;
-
-          allHoldings.push({
-            holdingId: `${itemId}_${h.account_id}_${h.security_id}`,
-            itemId: itemId,
-            institutionName: itemData.institutionName,
-            accountId: h.account_id,
-            securityId: h.security_id,
-            name: security.name || 'Unknown Security',
-            tickerSymbol: security.tickerSymbol || 'N/A',
-            type: security.type || 'Other',
-            quantity: h.quantity,
-            costBasis: h.cost_basis,
-            price: security.closePrice || h.institution_price || 0,
-            value: Math.round(value * 100) / 100,
-            isoCurrencyCode: h.iso_currency_code || security.isoCurrencyCode || 'USD'
-          });
-        }
-      } catch (itemError) {
-        // If the institution does not have or support investment accounts, Plaid returns an error
-        // e.g. PRODUCTS_NOT_SUPPORTED or INVALID_PRODUCT. We handle this gracefully.
-        const errorCode = itemError.response?.data?.error_code;
-        if (errorCode === 'PRODUCTS_NOT_SUPPORTED' || errorCode === 'INVALID_PRODUCT') {
-          // Expected for banks without investment accounts
-          continue;
-        }
-        console.warn(`Investments not available for ${itemData.institutionName}: ${errorCode || itemError.message}`);
-      }
-    }
-
-    // Sort holdings by value descending
-    allHoldings.sort((a, b) => (b.value || 0) - (a.value || 0));
-
-    res.json({
-      totalInvestmentsValue: Math.round(totalInvestmentsValue * 100) / 100,
-      holdingsCount: allHoldings.length,
-      holdings: allHoldings
-    });
+    const data = await fetchInvestmentsData();
+    res.json(data);
   } catch (error) {
     console.error('Error fetching investments:', error.message);
     res.status(500).json({ error: 'Failed to retrieve investments', details: error.message });
@@ -599,7 +607,147 @@ app.post('/disconnect_account', async (req, res) => {
 });
 
 // ==========================================
-// 4. Standalone Plaid Link Bridge Page
+// 4. Google Sheets Sync Routes
+// ==========================================
+
+/**
+ * GET /sheets/config
+ * Retrieves current Google Sheets sync configuration & mappings
+ */
+app.get('/sheets/config', (req, res) => {
+  try {
+    const config = sheets.readConfig();
+    res.json(config);
+  } catch (err) {
+    console.error('[Sheets] Error reading config:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /sheets/config
+ * Saves updated Google Sheets sync configuration & mappings
+ */
+app.post('/sheets/config', (req, res) => {
+  try {
+    const updated = sheets.writeConfig(req.body);
+    res.json({ success: true, config: updated });
+  } catch (err) {
+    console.error('[Sheets] Error saving config:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /sheets/template_script
+ * Returns the Google Apps Script webhook code for user to copy-paste
+ */
+app.get('/sheets/template_script', (req, res) => {
+  try {
+    const script = sheets.getTemplateScript();
+    res.json({ script });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /sheets/service_account_key
+ * Saves uploaded service_account.json key for Google Cloud Service Account method
+ */
+app.post('/sheets/service_account_key', (req, res) => {
+  try {
+    const { keyData } = req.body;
+    if (!keyData) {
+      return res.status(400).json({ error: 'Missing keyData in request body' });
+    }
+    let parsed;
+    if (typeof keyData === 'string') {
+      parsed = JSON.parse(keyData);
+    } else {
+      parsed = keyData;
+    }
+
+    if (!parsed.client_email || !parsed.private_key) {
+      return res.status(400).json({ error: 'Invalid service account JSON: missing client_email or private_key' });
+    }
+
+    fs.writeFileSync(sheets.SERVICE_ACCOUNT_FILE, JSON.stringify(parsed, null, 2), 'utf8');
+    const updated = sheets.writeConfig({
+      serviceAccount: {
+        ...sheets.readConfig().serviceAccount,
+        clientEmail: parsed.client_email,
+        hasKeyFile: true
+      }
+    });
+
+    console.log(`[Sheets] Service account key saved for ${parsed.client_email}`);
+
+    res.json({
+      success: true,
+      clientEmail: parsed.client_email,
+      message: `Saved service account key for ${parsed.client_email}`,
+      config: updated
+    });
+  } catch (err) {
+    console.error('[Sheets] Failed to save service account key:', err.message);
+    res.status(400).json({ error: 'Failed to save service account key: ' + err.message });
+  }
+});
+
+/**
+ * POST /sheets/test
+ * Tests Google Sheets connection (either Webhook or Service Account)
+ */
+app.post('/sheets/test', async (req, res) => {
+  try {
+    const config = sheets.readConfig();
+    const method = req.body.method || config.activeMethod || 'webhook';
+
+    if (method === 'service_account') {
+      const spreadsheetId = req.body.spreadsheetId || config.serviceAccount?.spreadsheetId;
+      const result = await sheets.testServiceAccount(spreadsheetId);
+      res.json(result);
+    } else {
+      const webhookUrl = req.body.webhookUrl || config.webhookUrl;
+      const result = await sheets.testWebhook(webhookUrl);
+      res.json(result);
+    }
+  } catch (err) {
+    console.error('[Sheets] Test connection failed:', err.message);
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /sheets/push
+ * Gathers latest account balances and executes push to Google Sheets
+ */
+app.post('/sheets/push', async (req, res) => {
+  try {
+    const config = sheets.readConfig();
+    let accountsData = req.body.accountsData;
+    let investmentsData = req.body.investmentsData;
+
+    // If accounts data not provided by client, fetch fresh from Plaid
+    if (!accountsData || !accountsData.accounts) {
+      accountsData = await fetchAccountsData();
+    }
+    if (!investmentsData || !investmentsData.holdings) {
+      investmentsData = await fetchInvestmentsData();
+    }
+
+    const pushResult = await sheets.executePush(config, accountsData, investmentsData);
+    console.log(`[Sheets] Push successful: ${pushResult.message}`);
+    res.json(pushResult);
+  } catch (err) {
+    console.error('[Sheets] Push failed:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==========================================
+// 5. Standalone Plaid Link Bridge Page
 // ==========================================
 /**
  * Serves a dedicated web page for Plaid Link at http://localhost:3000/link
