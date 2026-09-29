@@ -228,6 +228,8 @@ FinPull supports two connection methods:
 FinPull/
 ├── .gitignore                      # Excludes .env, .access_tokens.json, .sheets_config.json, service_account.json
 ├── README.md                       # Documentation & instructions
+├── package.json                    # Workspace scripts & extension packager
+├── package-extension.js            # Automated packager for Chrome Web Store
 │
 ├── server/                         # Node.js + Express backend
 │   ├── package.json                # Dependencies: express, plaid, googleapis, dotenv, cors
@@ -238,14 +240,40 @@ FinPull/
 │   └── .access_tokens.json.example # Schema example of local token storage
 │
 └── extension/                      # Chrome Extension (Manifest V3)
-    ├── manifest.json               # MV3 manifest with sandbox & permissions
+    ├── manifest.json               # MV3 manifest with clean storage & host permissions
     ├── popup.html                  # Extension popup interface with Google Sheets tab
     ├── popup.css                   # Dark FinTech design system & sheets styling
-    ├── popup.js                    # UI logic, data sync & Google Sheets dispatcher
-    ├── sandbox.html                # MV3 Sandboxed page for Plaid Link SDK
-    ├── sandbox.js                  # Bridge between Plaid Link and popup.js
+    ├── popup.js                    # UI logic, data sync, caching & sheets dispatcher
     └── icons/                      # Extension icons (16px, 48px, 128px)
 ```
+
+---
+
+## 🛍️ Chrome Web Store Upload Guide
+
+To publish or distribute FinPull via the [Chrome Web Store](https://chrome.google.com/webstore/devconsole):
+
+### 1. Build the Store Package
+Run the automated packaging script from the project root:
+```bash
+npm run package:extension
+```
+This validates all extension assets and compiles a clean, store-compliant zip archive:
+`finpull-chrome-extension.zip`
+
+### 2. Upload to Developer Dashboard
+1. Go to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole).
+2. Click **Add new item**.
+3. Upload `finpull-chrome-extension.zip`.
+
+### 3. Store Listing Details & Permissions Justification
+- **Name**: `FinPull - Personal Financial Dashboard`
+- **Summary**: `Securely track bank balances, transactions, and investments via Plaid and sync live numbers to Google Sheets.`
+- **Category**: `Productivity` or `Finance`
+- **Permissions Justification**:
+  - `storage`: *Used to cache retrieved account balances and persist user settings (such as local server URL) locally on the device.*
+  - Host permissions (`http://localhost:*/*`, `http://127.0.0.1:*/*`): *Used strictly to communicate with the user's local single-user backend server running on their machine.*
+- **Single Purpose**: *FinPull allows users to view personal bank and investment account balances and push numbers into a Google Sheets budget via their private local server.*
 
 ---
 
@@ -284,3 +312,4 @@ FinPull/
 ## 📜 License
 
 MIT License. Designed for personal single-user financial tracking.
+

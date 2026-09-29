@@ -375,15 +375,34 @@
           </div>
         </div>
 
+        <!-- Server Connection Settings -->
+        <div class="settings-card">
+          <div class="settings-header">
+            <h4>Local Backend Server</h4>
+          </div>
+          <p class="section-hint">FinPull connects to your local Node.js server. Default is <code>http://localhost:3000</code>.</p>
+          <div class="form-row-2" style="margin-top: 8px;">
+            <div class="form-group flex-2">
+              <label for="server-url-input">Server Base URL</label>
+              <input type="url" id="server-url-input" class="text-input" placeholder="http://localhost:3000" value="http://localhost:3000">
+            </div>
+            <div class="form-group form-action-col">
+              <label>&nbsp;</label>
+              <button id="btn-save-server-url" class="primary-btn btn-small">Save</button>
+            </div>
+          </div>
+        </div>
+
         <div class="settings-card info-box">
           <h4>Security & Privacy</h4>
-          <p>FinPull communicates strictly with your local machine (<code>localhost:3000</code>). Your Plaid Secret is never exposed to the browser.</p>
+          <p>FinPull communicates strictly with your local machine. Your Plaid Secret is never exposed to the browser.</p>
           <div class="link-helper-row">
             <span>Alternative Link flow:</span>
-            <a href="http://localhost:3000/link" target="_blank" class="text-link">Open Plaid Link in Web Tab &rarr;</a>
+            <a id="link-direct-tab" href="http://localhost:3000/link" target="_blank" class="text-link">Open Plaid Link in Web Tab &rarr;</a>
           </div>
         </div>
       </section>
+
     </main>
 
   </div>

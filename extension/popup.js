@@ -5,7 +5,7 @@
  * Never touches the Plaid Secret or makes direct calls to Plaid API.
  */
 
-const SERVER_URL = 'http://localhost:3000';
+let serverUrl = 'http://localhost:3000';
 
 // State
 let appState = {
@@ -108,15 +108,21 @@ const el = {
   snapshotEnabled: document.getElementById('snapshot-enabled'),
   snapshotSheetName: document.getElementById('snapshot-sheet-name'),
   snapshotMode: document.getElementById('snapshot-mode'),
-  sheetsAutoPush: document.getElementById('sheets-auto-push')
+  sheetsAutoPush: document.getElementById('sheets-auto-push'),
+
+  // Server URL Settings
+  serverUrlInput: document.getElementById('server-url-input'),
+  btnSaveServerUrl: document.getElementById('btn-save-server-url'),
+  linkDirectTab: document.getElementById('link-direct-tab')
 };
 
 // ==========================================================================
 // Initialization & Event Listeners
 // ==========================================================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   setupEventListeners();
+  await loadStoredSettingsAndCache();
   checkServerAndFetchData();
 });
 
@@ -240,6 +246,13 @@ function setupEventListeners() {
       saveSheetsConfig(false);
     });
   }
+
+  // Save Server URL
+  if (el.btnSaveServerUrl) {
+    el.btnSaveServerUrl.addEventListener('click', () => {
+      saveServerUrlSetting();
+    });
+  }
 }
 
 function switchTab(tabId) {
@@ -258,6 +271,87 @@ function switchTab(tabId) {
 }
 
 // ==========================================
+// Local Storage & Caching
+// ==========================================
+
+async function loadStoredSettingsAndCache() {
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    try {
+      const data = await chrome.storage.local.get(['serverUrl', 'cachedState']);
+      if (data.serverUrl) {
+        serverUrl = data.serverUrl;
+        if (el.serverUrlInput) el.serverUrlInput.value = serverUrl;
+        if (el.linkDirectTab) el.linkDirectTab.href = `${serverUrl}/link`;
+      }
+      if (data.cachedState) {
+        const cached = data.cachedState;
+        appState.accounts = cached.accounts || [];
+        appState.institutions = cached.institutions || [];
+        appState.transactions = cached.transactions || [];
+        appState.holdings = cached.holdings || [];
+        appState.totalBalance = cached.totalBalance || 0;
+        appState.totalInvestmentsValue = cached.totalInvestmentsValue || 0;
+        if (cached.lastUpdated) {
+          appState.lastUpdated = new Date(cached.lastUpdated);
+        }
+        if (cached.sheetsConfig) {
+          appState.sheetsConfig = { ...appState.sheetsConfig, ...cached.sheetsConfig };
+        }
+        // Render instantly from local cache while fresh data is being fetched
+        renderAll();
+      }
+    } catch (err) {
+      console.warn('Could not read from chrome.storage:', err);
+    }
+  }
+}
+
+function saveStateToCache() {
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    try {
+      chrome.storage.local.set({
+        cachedState: {
+          accounts: appState.accounts,
+          institutions: appState.institutions,
+          transactions: appState.transactions,
+          holdings: appState.holdings,
+          totalBalance: appState.totalBalance,
+          totalInvestmentsValue: appState.totalInvestmentsValue,
+          lastUpdated: appState.lastUpdated ? appState.lastUpdated.toISOString() : null,
+          sheetsConfig: appState.sheetsConfig
+        }
+      });
+    } catch (err) {
+      console.warn('Could not save to chrome.storage:', err);
+    }
+  }
+}
+
+async function saveServerUrlSetting() {
+  if (!el.serverUrlInput) return;
+  let newUrl = el.serverUrlInput.value.trim();
+  if (!newUrl) {
+    newUrl = 'http://localhost:3000';
+    el.serverUrlInput.value = newUrl;
+  }
+  newUrl = newUrl.replace(/\/+$/, '');
+  serverUrl = newUrl;
+
+  if (el.linkDirectTab) el.linkDirectTab.href = `${serverUrl}/link`;
+
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    try {
+      await chrome.storage.local.set({ serverUrl });
+    } catch (err) {
+      console.warn('Failed to save server URL in storage:', err);
+    }
+  }
+
+  showAlert(`Server URL saved: ${serverUrl}`, 'success');
+  checkServerAndFetchData();
+}
+
+// ==========================================
 // Plaid Link Flow
 // ==========================================
 
@@ -267,7 +361,7 @@ function startPlaidLinkFlow() {
     return;
   }
 
-  const linkUrl = `${SERVER_URL}/link`;
+  const linkUrl = `${serverUrl}/link`;
 
   if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.create) {
     chrome.tabs.create({ url: linkUrl });
@@ -284,7 +378,7 @@ function startPlaidLinkFlow() {
 
 async function checkServerAndFetchData() {
   try {
-    const res = await fetch(`${SERVER_URL}/health`, { method: 'GET' });
+    const res = await fetch(`${serverUrl}/health`, { method: 'GET' });
     if (res.ok) {
       const healthData = await res.json();
       appState.isServerOnline = true;
@@ -322,10 +416,10 @@ async function refreshAllData() {
 
   try {
     const [accountsRes, txRes, invRes, sheetsRes] = await Promise.allSettled([
-      fetch(`${SERVER_URL}/accounts`).then(r => r.json()),
-      fetch(`${SERVER_URL}/transactions`).then(r => r.json()),
-      fetch(`${SERVER_URL}/investments`).then(r => r.json()),
-      fetch(`${SERVER_URL}/sheets/config`).then(r => r.json())
+      fetch(`${serverUrl}/accounts`).then(r => r.json()),
+      fetch(`${serverUrl}/transactions`).then(r => r.json()),
+      fetch(`${serverUrl}/investments`).then(r => r.json()),
+      fetch(`${serverUrl}/sheets/config`).then(r => r.json())
     ]);
 
     // Handle Accounts
@@ -358,6 +452,9 @@ async function refreshAllData() {
 
     appState.lastUpdated = new Date();
 
+    // Cache updated data
+    saveStateToCache();
+
     // Re-render UI
     renderAll();
 
@@ -381,7 +478,7 @@ async function disconnectAccount(itemId, institutionName) {
   showLoading(`Disconnecting ${institutionName}...`);
 
   try {
-    const response = await fetch(`${SERVER_URL}/disconnect_account`, {
+    const response = await fetch(`${serverUrl}/disconnect_account`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ itemId })
@@ -408,7 +505,7 @@ async function disconnectAccount(itemId, institutionName) {
 
 async function loadSheetsConfig() {
   try {
-    const res = await fetch(`${SERVER_URL}/sheets/config`);
+    const res = await fetch(`${serverUrl}/sheets/config`);
     if (res.ok) {
       const config = await res.json();
       appState.sheetsConfig = { ...appState.sheetsConfig, ...config };
@@ -531,7 +628,7 @@ async function copyAppsScriptToClipboard() {
   try {
     let scriptCode = appState.templateScript;
     if (!scriptCode) {
-      const res = await fetch(`${SERVER_URL}/sheets/template_script`);
+      const res = await fetch(`${serverUrl}/sheets/template_script`);
       if (res.ok) {
         const data = await res.json();
         scriptCode = data.script;
@@ -563,7 +660,7 @@ async function saveServiceAccountKey() {
 
   showLoading('Saving service account key...');
   try {
-    const res = await fetch(`${SERVER_URL}/sheets/service_account_key`, {
+    const res = await fetch(`${serverUrl}/sheets/service_account_key`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ keyData: rawKey })
@@ -601,7 +698,7 @@ async function saveSheetsConfig(showToast = false) {
   };
 
   try {
-    const res = await fetch(`${SERVER_URL}/sheets/config`, {
+    const res = await fetch(`${serverUrl}/sheets/config`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(cfg)
@@ -627,7 +724,7 @@ async function testSheetsConnection() {
   showLoading('Testing Google Sheets connection...');
 
   try {
-    const res = await fetch(`${SERVER_URL}/sheets/test`, {
+    const res = await fetch(`${serverUrl}/sheets/test`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -819,7 +916,7 @@ async function pushToGoogleSheets(isBackground = false) {
       }
     };
 
-    const res = await fetch(`${SERVER_URL}/sheets/push`, {
+    const res = await fetch(`${serverUrl}/sheets/push`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)

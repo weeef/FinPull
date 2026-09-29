@@ -4,6 +4,7 @@
   "description": "FinPull Chrome Extension & Server",
   "scripts": {
     "start": "npm start --prefix server",
-    "dev": "npm run dev --prefix server"
+    "dev": "npm run dev --prefix server",
+    "package:extension": "node package-extension.js"
   }
 }

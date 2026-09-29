@@ -29,3 +29,9 @@ Thumbs.db
 *.vbs
 server/*.bat
 server/*.vbs
+
+# Extension Packages & Build Artifacts
+*.zip
+dist/
+build/
+
